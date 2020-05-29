@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.mapper.BoardMapper">
+
+	<sql id="boardColumns">
+		  idx
+		, title
+		, content
+		, writer
+		, view_cnt
+		, notice_yn
+		, secret_yn
+		, delete_yn
+		, insert_time
+		, update_time
+		, delete_time
+	</sql>
+
+	<insert id="insertBoard" parameterType="BoardDTO">
+		INSERT INTO tbl_board (
+			<include refid="boardColumns" />
+		) VALUES (
+			  (SELECT NVL(MAX(IDX) + 1, 1) FROM tbl_board)
+			, #{title}
+			, #{content}
+			, #{writer}
+			, 0
+			, NVL(#{noticeYn, jdbcType=CHAR}, 'N')
+			, NVL(#{secretYn, jdbcType=CHAR}, 'N')
+			, 'N'
+			, SYSDATE
+			, NULL
+			, NULL
+		)
+	</insert>
+
+	<select id="selectBoardDetail" parameterType="long" resultType="BoardDTO">
+		SELECT
+			<include refid="boardColumns" />
+		FROM
+			tbl_board
+		WHERE
+			delete_yn = 'N'
+		AND
+			idx = #{idx}
+	</select>
+
+	<update id="updateBoard" parameterType="BoardDTO">
+		UPDATE tbl_board
+		SET
+			  update_time = SYSDATE
+			, title = #{title}
+			, content = #{content}
+			, writer = #{writer}
+			, notice_yn = NVL(#{noticeYn, jdbcType=CHAR}, 'N')
+			, secret_yn = NVL(#{secretYn, jdbcType=CHAR}, 'N')
+		WHERE
+			idx = #{idx}
+	</update>
+
+	<update id="deleteBoard" parameterType="long">
+		UPDATE tbl_board
+		SET
+			  delete_yn = 'Y'
+			, delete_time = SYSDATE
+		WHERE
+			idx = #{idx}
+	</update>
+
+	<select id="selectBoardList" parameterType="BoardDTO" resultType="BoardDTO">
+		SELECT RNUM,
+			   <include refid="boardColumns" />
+		  FROM (
+				SELECT
+					ROW_NUMBER() OVER(ORDER BY notice_yn DESC, idx DESC, insert_time DESC) AS rnum,
+					<include refid="boardColumns" />
+				FROM
+					tbl_board
+				WHERE
+					delete_yn = 'N'
+				<include refid="CommonMapper.search" />
+		  )
+		 WHERE 1=1
+		   <include refid="CommonMapper.paging" />
+
+	</select>
+
+	<select id="selectBoardTotalCount" parameterType="BoardDTO" resultType="int">
+		SELECT
+			COUNT(*)
+		FROM
+			tbl_board
+		WHERE
+			delete_yn = 'N'
+		<include refid="CommonMapper.search" />
+	</select>
+</mapper>
